@@ -81,6 +81,8 @@ int main() {
 	ew::Shader invert = ew::Shader("assets/postprocessing.vert", "assets/invert.frag");
 	ew::Shader boxblur = ew::Shader("assets/postprocessing.vert", "assets/boxblur.frag");
 
+
+
 	// Create vector of post processing shaders
 	shaders.reserve(numShaders);
 	shaders.push_back(noPP);
@@ -109,12 +111,16 @@ int main() {
 
 	// Models & Meshes
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
+	ew::Model fishModel = ew::Model("assets/fish.obj");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 
 	// Transforms
 	ew::Transform monkeyTransform;
 	ew::Transform planeTransform;
+	ew::Transform fishTransform;
 	planeTransform.position = glm::vec3(0, -2, 0);
+
+	fishTransform.position = glm::vec3(0, -1, 0);
 
 	// Camera
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -147,6 +153,9 @@ int main() {
 		
 		depthOnly.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
+
+		depthOnly.setMat4("_Model", fishTransform.modelMatrix());
+		fishModel.draw();
 
 		depthOnly.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
@@ -190,6 +199,9 @@ int main() {
 
 		monkeyModel.draw(); // Draws monkey model using current shader
 
+		lit.setMat4("_Model", fishTransform.modelMatrix());
+		fishModel.draw();
+
 		lit.setMat4("_Model", planeTransform.modelMatrix());
 		lit.setInt("_MainTex", 1);
 		lit.setInt("_NormalTex", 0);
@@ -216,7 +228,7 @@ int main() {
 			break;
 		}
 
-		glBindTextureUnit(0, framebuffer.colorBuffer[0]);
+		glBindTextureUnit(0, framebuffer.colorBuffers[0]);
 		glBindVertexArray(dummyVAO);
 
 		// Draw fullscreen quad
