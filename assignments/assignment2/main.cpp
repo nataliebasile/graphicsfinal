@@ -112,10 +112,12 @@ int main() {
 	GLuint normalTexture = ew::loadTexture("assets/Building_NormalGL.png");
 	GLuint mountainTexture = ew::loadTexture("assets/Mountain/green2.png");
 	GLuint dudvTexture = ew::loadTexture("assets/Water/waterDUDV.png");
+	GLuint fishTexture = ew::loadTexture("assets/fish_texture.png");
 
 	// Models & Meshes
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Model fishModel = ew::Model("assets/fish.obj");
+	ew::Model treeModel = ew::Model("assets/Tree.fbx");
 	ew::Model mountainModel = ew::Model("assets/Mountain/mountain3.fbx");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(115, 200, 5));
 
@@ -123,15 +125,17 @@ int main() {
 	ew::Transform monkeyTransform;
 	ew::Transform planeTransform;
 	ew::Transform fishTransform;
+	ew::Transform treeTransform;
 	ew::Transform mountainTransform;
 
-	monkeyTransform.position = glm::vec3(-20, -5, 0);
+	monkeyTransform.position = glm::vec3(-28, -5, -15);
 	planeTransform.position = glm::vec3(0, -10, 0);
-	fishTransform.position = glm::vec3(-20, -5, -10);
+	fishTransform.position = glm::vec3(-23, -11, -15);
+	fishTransform.scale = glm::vec3(0.5, 0.5, 0.5);
+	treeTransform.position = glm::vec3(-15,  -10, -10);
 	mountainTransform.position = glm::vec3(0, -20, 0);
 	mountainTransform.scale = glm::vec3(0.05, 0.05, 0.05);
 	mountainTransform.rotation = glm::rotate(mountainTransform.rotation, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
-
 
 	// Camera
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -145,6 +149,14 @@ int main() {
 	shadowCamera.orthographic = true;
 	shadowCamera.orthoHeight = shadowCamOrthoHeight;
 	shadowCamera.aspectRatio = 1;
+
+	// Fish Movement Varibles
+	float fishSpeed = 0.0008;
+	float MaxDis = 6;
+	glm::vec3 origin = glm::vec3(-20, -10, -15);
+
+	bool toggleDir = true;
+
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -181,6 +193,24 @@ int main() {
 		mountainModel.draw();
 
 
+		// ----- Moving Fish -----
+		if (toggleDir) {
+			fishTransform.position += glm::vec3(0, 0, fishSpeed);
+			if (fishTransform.position.z > origin.z + MaxDis) {
+				toggleDir = !toggleDir;
+				fishTransform.rotation = glm::vec3(0, 180 * 0.0174533, 0);
+			}
+		}
+		else
+		{
+			fishTransform.position += glm::vec3(0, 0, -fishSpeed);
+			if (fishTransform.position.z < origin.z - MaxDis) {
+				toggleDir = !toggleDir;
+				fishTransform.rotation = glm::vec3(0, 0, 0);
+			}
+		}
+		
+
 
 		// ----- NORMAL DRAW STUFF -----
 		// Drawing the entire scene normally
@@ -201,6 +231,7 @@ int main() {
 		glBindTextureUnit(6, reflectionFB.colorBuffers[0]);
 		glBindTextureUnit(7, refractionFB.colorBuffers[0]);
 		glBindTextureUnit(8, dudvTexture);
+		glBindTextureUnit(9, fishTexture);
 
 		// Camera movement
 		cameraController.move(window, &camera, deltaTime);
@@ -209,6 +240,9 @@ int main() {
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 		lit.use();
+		lit.setFloat("time", time);
+		lit.setInt("movement", 0);
+		lit.setVec3("centerPoint", monkeyTransform.position);
 		lit.setMat4("_Model", monkeyTransform.modelMatrix());
 		lit.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		lit.setMat4("_LightViewProjection", shadowCamera.projectionMatrix() * shadowCamera.viewMatrix());
@@ -229,9 +263,25 @@ int main() {
 		monkeyModel.draw(); // Draws monkey model using current shader
 
 		lit.setMat4("_Model", fishTransform.modelMatrix());
+		lit.setFloat("time", time);
+		lit.setInt("movement", 1);
+		lit.setVec3("centerPoint", fishTransform.position + glm::vec3(1.5, 0, 0));
+		lit.setInt("_MainTex", 9);
+		lit.setInt("_NormalTex", 9);
 		fishModel.draw();
 
+
+		lit.setMat4("_Model", treeTransform.modelMatrix());
+		lit.setFloat("time", time);
+		lit.setInt("movement", 2);
+		lit.setVec3("centerPoint", treeTransform.position + glm::vec3(0,12,0));
+		lit.setInt("_MainTex", 9);
+		lit.setInt("_NormalTex", 9);
+		treeModel.draw();
+
+
 		lit.setMat4("_Model", mountainTransform.modelMatrix());
+		lit.setInt("movement", 0);
 		lit.setInt("_MainTex", 5);
 		lit.setInt("_NormalTex", 0);
 		mountainModel.draw();
@@ -264,6 +314,9 @@ int main() {
 		cameraController.pitch = -cameraController.pitch;
 
 		lit.use();
+		lit.setFloat("time", time);
+		lit.setInt("movement", 0);
+		lit.setVec3("centerPoint", monkeyTransform.position);
 		lit.setMat4("_ViewProjection", camera.projectionMatrix()* camera.viewMatrix());
 		lit.setMat4("_LightViewProjection", shadowCamera.projectionMatrix()* shadowCamera.viewMatrix());
 		lit.setVec4("_ClipPlane", glm::vec4(0, 1, 0, -planeTransform.position.y)); // Culls everything below height
@@ -284,7 +337,16 @@ int main() {
 		monkeyModel.draw();
 
 		lit.setMat4("_Model", fishTransform.modelMatrix());
+
 		fishModel.draw();
+
+		lit.setMat4("_Model", treeTransform.modelMatrix());
+		lit.setFloat("time", time);
+		lit.setInt("movement", 2);
+		lit.setVec3("centerPoint", treeTransform.position + glm::vec3(0, 12, 0));
+		lit.setInt("_MainTex", 9);
+		lit.setInt("_NormalTex", 9);
+		treeModel.draw();
 
 		lit.setMat4("_Model", mountainTransform.modelMatrix());
 		lit.setInt("_MainTex", 5);
@@ -322,6 +384,7 @@ int main() {
 		monkeyModel.draw();
 
 		lit.setMat4("_Model", fishTransform.modelMatrix());
+		
 		fishModel.draw();
 
 		lit.setMat4("_Model", mountainTransform.modelMatrix());

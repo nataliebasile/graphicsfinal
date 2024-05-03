@@ -9,6 +9,12 @@ layout(location = 3) in vec2 vTexCoord; // Vertex texture coordinate (UV)
 uniform mat4 _Model; // Model -> World Matrix
 uniform mat4 _ViewProjection; // Combined View -> Projection Matrix
 uniform mat4 _LightViewProjection; // View + Projection of light source camera
+// Vertex Animation Vars
+uniform float time;
+uniform int movement;
+uniform vec3 centerPoint;
+
+
 
 uniform vec4 _ClipPlane;
 //const vec4 _ClipPlane = vec4(0, -1, 0, -5); //culls everything above height (15)
@@ -21,6 +27,37 @@ out Surface {
 	vec2 TexCoord;
 	mat3 TBN; // TBN matrix
 }vs_out;
+
+// Fish Movement 
+vec3 wave(vec3 pos){
+
+	float frequency = 1;
+    float amplitude = 0.5;
+
+    float displacement = amplitude * sin(time * frequency + pos.z);
+    
+    vec3 newPos = vPos + vec3(displacement, 0, 0);
+
+	return newPos;
+}
+// Tree Movement
+vec3 sway(vec3 pos){
+
+	float frequency = 0.5;
+    float amplitude = 0.05;
+
+    float displacement = amplitude * sin(time * frequency );
+
+	float displacement2 = (amplitude / 2) * sin(time * (frequency / 2));
+    
+	if(pos.y > centerPoint.y){
+		vec3 newPos = vPos + vec3(0, displacement2, displacement);
+		return newPos;
+	}else {
+		return pos;
+	}
+	
+}
 
 
 void main() {
@@ -42,7 +79,19 @@ void main() {
 	vs_out.TBN = mat3(T, B, N);
 
 	vs_out.TexCoord = vTexCoord;
+
+	// checking to see for vertex shifter
+	vec3 newPos;
+	if (movement == 1){
+		newPos = wave(vPos);
+	}else if(movement == 2){
+		newPos = sway(vPos);
+	}else
+	{
+		newPos = vPos;
+	} 
+
 	
 	// Transform vertex position to homogeneous clip space
-	gl_Position = _ViewProjection * _Model * vec4(vPos, 1.0);
+	gl_Position = _ViewProjection * _Model * vec4(newPos, 1.0);
 }
