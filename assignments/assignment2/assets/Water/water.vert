@@ -18,6 +18,10 @@ out Surface {
 	mat3 TBN; // TBN matrix
 }vs_out;
 
+out vec4 ClipSpacePos;
+
+const float Tile = 6.0f;
+
 void main() {
 	// Transform vertex position to World Space
 	vs_out.WorldPos = vec3(_Model * vec4(vPos, 1.0));
@@ -39,7 +43,8 @@ void main() {
 	//vs_out.TexCoord = vTexCoord;
 	
 	// Transform vertex position to homogeneous clip space
-	gl_Position = _ViewProjection * _Model * vec4(vPos, 1.0);
+	ClipSpacePos = _ViewProjection * _Model * vec4(vPos, 1.0);
+	gl_Position = ClipSpacePos;
 	vs_out.TexCoord = vec2(vPos.x/2.0 + 0.5, vPos.y/2.0 + 0.5);
 
 }

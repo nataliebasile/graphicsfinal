@@ -111,12 +111,13 @@ int main() {
 	GLuint buildingTexture = ew::loadTexture("assets/Building_Color.png");
 	GLuint normalTexture = ew::loadTexture("assets/Building_NormalGL.png");
 	GLuint mountainTexture = ew::loadTexture("assets/Mountain/green2.png");
+	GLuint dudvTexture = ew::loadTexture("assets/Water/waterDUDV.png");
 
 	// Models & Meshes
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Model fishModel = ew::Model("assets/fish.obj");
 	ew::Model mountainModel = ew::Model("assets/Mountain/mountain3.fbx");
-	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(120, 200, 5));
+	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(115, 200, 5));
 
 	// Transforms
 	ew::Transform monkeyTransform;
@@ -124,8 +125,9 @@ int main() {
 	ew::Transform fishTransform;
 	ew::Transform mountainTransform;
 
+	monkeyTransform.position = glm::vec3(-20, -5, 0);
 	planeTransform.position = glm::vec3(0, -10, 0);
-	fishTransform.position = glm::vec3(0, -1, 0);
+	fishTransform.position = glm::vec3(-20, -5, -10);
 	mountainTransform.position = glm::vec3(0, -20, 0);
 	mountainTransform.scale = glm::vec3(0.05, 0.05, 0.05);
 	mountainTransform.rotation = glm::rotate(mountainTransform.rotation, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
@@ -196,6 +198,9 @@ int main() {
 		glBindTextureUnit(3, normalTexture);
 		glBindTextureUnit(4, shadowMap.depthTexture);
 		glBindTextureUnit(5, mountainTexture);
+		glBindTextureUnit(6, reflectionFB.colorBuffers[0]);
+		glBindTextureUnit(7, refractionFB.colorBuffers[0]);
+		glBindTextureUnit(8, dudvTexture);
 
 		// Camera movement
 		cameraController.move(window, &camera, deltaTime);
@@ -237,7 +242,11 @@ int main() {
 		waterShader.use();
 		waterShader.setMat4("_Model", planeTransform.modelMatrix());
 		waterShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		waterShader.setInt("_MainTex", 2);
+		waterShader.setInt("_ReflectionTexture", 6);
+		waterShader.setInt("_RefractionTexture", 7);
+		waterShader.setInt("_DUDVTexture", 8);
+		waterShader.setFloat("deltaTime", time);
+		//waterShader.setInt("_MainTex", 2);
 
 		planeMesh.draw();
 
