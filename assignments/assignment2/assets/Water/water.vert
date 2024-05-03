@@ -22,6 +22,8 @@ void main() {
 	// Transform vertex position to World Space
 	vs_out.WorldPos = vec3(_Model * vec4(vPos, 1.0));
 
+	gl_ClipDistance[0] = 0;
+
 	// Vertex position in light space to pass to fragment shader
 	LightSpacePos = _LightViewProjection * _Model * vec4(vPos, 1);
 

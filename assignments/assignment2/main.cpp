@@ -116,7 +116,7 @@ int main() {
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Model fishModel = ew::Model("assets/fish.obj");
 	ew::Model mountainModel = ew::Model("assets/Mountain/mountain3.fbx");
-	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(50, 50, 5));
+	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(120, 200, 5));
 
 	// Transforms
 	ew::Transform monkeyTransform;
@@ -126,7 +126,7 @@ int main() {
 
 	planeTransform.position = glm::vec3(0, -10, 0);
 	fishTransform.position = glm::vec3(0, -1, 0);
-	mountainTransform.position = glm::vec3(0, -30, 0);
+	mountainTransform.position = glm::vec3(0, -20, 0);
 	mountainTransform.scale = glm::vec3(0.05, 0.05, 0.05);
 	mountainTransform.rotation = glm::rotate(mountainTransform.rotation, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
 
@@ -150,6 +150,8 @@ int main() {
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
+
+		glEnable(GL_CLIP_DISTANCE0);
 
 
 
@@ -205,6 +207,7 @@ int main() {
 		lit.setMat4("_Model", monkeyTransform.modelMatrix());
 		lit.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		lit.setMat4("_LightViewProjection", shadowCamera.projectionMatrix() * shadowCamera.viewMatrix());
+		lit.setVec4("_ClipPlane", glm::vec4(0, -1, 0, 100)); // Culls everything above height
 		lit.setFloat("_MinBias", minBias);
 		lit.setFloat("_MaxBias", maxBias);
 		lit.setInt("_MainTex", 2);
@@ -240,16 +243,21 @@ int main() {
 
 
 		// ----- WATER SHADER STUFF -----
-		// Drawing the entire scene (except for water itself) onto the water reflection texture
+		// Drawing the entire scene onto the water REFLECTION texture
 
 		glBindFramebuffer(GL_FRAMEBUFFER, reflectionFB.fbo);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glCullFace(GL_BACK); // Back face culling
 
+		float dist = 2 * (camera.position.y - planeTransform.position.y);
+		camera.position.y -= dist;
+		cameraController.pitch = -cameraController.pitch;
+
 		lit.use();
 		lit.setMat4("_ViewProjection", camera.projectionMatrix()* camera.viewMatrix());
 		lit.setMat4("_LightViewProjection", shadowCamera.projectionMatrix()* shadowCamera.viewMatrix());
+		lit.setVec4("_ClipPlane", glm::vec4(0, 1, 0, -planeTransform.position.y)); // Culls everything below height
 		lit.setFloat("_MinBias", minBias);
 		lit.setFloat("_MaxBias", maxBias);
 		lit.setInt("_MainTex", 2);
@@ -274,7 +282,43 @@ int main() {
 		lit.setInt("_NormalTex", 0);
 		mountainModel.draw();
 
+		camera.position.y += dist;
+		cameraController.pitch = -cameraController.pitch;
 
+		// Drawing the entire scene onto the water REFRACTION texture
+
+		glBindFramebuffer(GL_FRAMEBUFFER, refractionFB.fbo);
+		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glCullFace(GL_BACK); // Back face culling
+
+		lit.use();
+		lit.setMat4("_ViewProjection", camera.projectionMatrix()* camera.viewMatrix());
+		lit.setMat4("_LightViewProjection", shadowCamera.projectionMatrix()* shadowCamera.viewMatrix());
+		lit.setVec4("_ClipPlane", glm::vec4(0, -1, 0, planeTransform.position.y)); // Culls everything above height
+		lit.setFloat("_MinBias", minBias);
+		lit.setFloat("_MaxBias", maxBias);
+		lit.setInt("_MainTex", 2);
+		lit.setInt("_NormalTex", 3);
+		lit.setInt("_ShadowMap", 4);
+		lit.setVec3("_EyePos", camera.position);
+		lit.setVec3("_LightDirection", light.direction);
+		lit.setVec3("_LightColor", light.color);
+
+		lit.setMat4("_Model", monkeyTransform.modelMatrix());
+		lit.setFloat("_Material.Ka", material.Ka);
+		lit.setFloat("_Material.Kd", material.Kd);
+		lit.setFloat("_Material.Ks", material.Ks);
+		lit.setFloat("_Material.Shininess", material.Shininess);
+		monkeyModel.draw();
+
+		lit.setMat4("_Model", fishTransform.modelMatrix());
+		fishModel.draw();
+
+		lit.setMat4("_Model", mountainTransform.modelMatrix());
+		lit.setInt("_MainTex", 5);
+		lit.setInt("_NormalTex", 0);
+		mountainModel.draw();
 
 
 
@@ -395,6 +439,16 @@ void drawUI() {
 
 	windowSize = ImGui::GetWindowSize();
 	ImGui::Image((ImTextureID)reflectionFB.colorBuffers[0], windowSize, ImVec2(0, 1), ImVec2(1, 0));
+
+	ImGui::EndChild();
+	ImGui::End();
+
+	// Water refraction map debug render
+	ImGui::Begin("Water Refraction Map");
+	ImGui::BeginChild("Water Refraction Map");
+
+	windowSize = ImGui::GetWindowSize();
+	ImGui::Image((ImTextureID)refractionFB.colorBuffers[0], windowSize, ImVec2(0, 1), ImVec2(1, 0));
 
 	ImGui::EndChild();
 	ImGui::End();

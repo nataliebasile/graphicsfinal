@@ -10,6 +10,10 @@ uniform mat4 _Model; // Model -> World Matrix
 uniform mat4 _ViewProjection; // Combined View -> Projection Matrix
 uniform mat4 _LightViewProjection; // View + Projection of light source camera
 
+uniform vec4 _ClipPlane;
+//const vec4 _ClipPlane = vec4(0, -1, 0, -5); //culls everything above height (15)
+
+
 out vec4 LightSpacePos;
 out Surface {
 	vec3 WorldPos; // Vertex position in world space
@@ -22,6 +26,8 @@ out Surface {
 void main() {
 	// Transform vertex position to World Space
 	vs_out.WorldPos = vec3(_Model * vec4(vPos, 1.0));
+
+	gl_ClipDistance[0] = dot((_Model * vec4(vPos, 1.0)), _ClipPlane);
 
 	// Vertex position in light space to pass to fragment shader
 	LightSpacePos = _LightViewProjection * _Model * vec4(vPos, 1);
